@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grok REIMAGINE</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin: 15px 0; padding: 12px; font-size: 16px; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; }
+    #result img { max-width: 100%; margin-top: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .loading { color: #666; }
+  </style>
+</head>
+<body>
+
+  <h1>Grok REIMAGINE</h1>
+  <p style="color:#e74c3c">Early prototype • Needs your own xAI API key in backend</p>
+
+  <textarea id="prompt" placeholder="Describe the image you want to generate... (be detailed!)"></textarea>
+
+  <div>
+    <button onclick="generateImage()">Generate Image</button>
+    <span id="status" class="loading"></span>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    const BACKEND_URL = "https://your-backend-domain.com"; // ← CHANGE THIS after deployment!
+
+    async function generateImage() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) {
+        alert("Please enter a prompt first!");
+        return;
+      }
+
+      const status = document.getElementById('status');
+      const resultDiv = document.getElementById('result');
+
+      status.textContent = "Generating... (can take 10-30 seconds)";
+      resultDiv.innerHTML = "";
+
+      try {
+        const response = await axios.post(`${BACKEND_URL}/api/generate`, { prompt });
+        const data = response.data;
+
+        if (data.data && data.data[0]?.url) {
+          resultDiv.innerHTML = `<img src="${data.data[0].url}" alt="Generated image"/>`;
+        } else {
+          resultDiv.innerHTML = "<p style='color:red'>No image returned. Check console.</p>";
+        }
+      } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = `<p style='color:red'>Error: ${err.response?.data?.error || err.message}</p>`;
+      } finally {
+        status.textContent = "";
+      }
+    }
+  </script>
+</body>
+</html>
