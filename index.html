@@ -3,145 +3,285 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Grok REIMAGINE - Free AI Image Generator</title>
+  <title>REIMAGINE - No Login • Multiple Models</title>
+  <meta name="description" content="Generate images for free without login. Using public AI endpoints.">
+  
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  
   <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacOSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      line-height: 1.5;
+    }
+
+    .container {
       max-width: 900px;
       margin: 0 auto;
-      padding: 20px;
-      background: #f8f9fa;
-      color: #333;
     }
-    h1 {
+
+    header {
       text-align: center;
-      color: #1a73e8;
+      margin: 2rem 0 2.5rem;
     }
-    .container {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
     }
+
+    .subtitle {
+      color: var(--text-light);
+      font-size: 1.05rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .prompt-area {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.6rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
     textarea {
       width: 100%;
-      min-height: 120px;
-      padding: 12px;
-      font-size: 16px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      min-height: 110px;
+      padding: 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1.05rem;
       resize: vertical;
-      margin-bottom: 15px;
+      transition: border-color 0.2s;
     }
-    button {
-      background: #1a73e8;
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      background: var(--primary);
       color: white;
       border: none;
       padding: 12px 28px;
-      font-size: 16px;
-      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
-    button:hover {
-      background: #0d65d6;
+
+    .btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
     }
-    button:disabled {
-      background: #aaa;
+
+    .btn:disabled {
+      background: #cbd5e1;
       cursor: not-allowed;
+      transform: none;
     }
+
     #status {
-      margin-left: 15px;
-      color: #555;
+      margin-left: 1rem;
+      color: #64748b;
       font-style: italic;
     }
-    #result {
-      margin-top: 25px;
+
+    .result-container {
+      margin-top: 2rem;
       text-align: center;
     }
-    #result img {
+
+    .result-image {
       max-width: 100%;
       border-radius: 12px;
-      box-shadow: 0 6px 25px rgba(0,0,0,0.15);
-      margin-top: 15px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+      background: #f1f5f9;
+      transition: opacity 0.4s ease;
     }
+
+    .loading-placeholder {
+      height: 400px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+      border-radius: 12px;
+      margin: 1rem auto;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
     .footer {
-      margin-top: 40px;
       text-align: center;
-      color: #777;
-      font-size: 14px;
+      margin-top: 3rem;
+      padding: 1.5rem;
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    .small-note {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>Grok REIMAGINE</h1>
-    <p style="text-align:center; color:#555;">
-      Free AI image generator • No sign-up • Powered by public Pollinations API
-    </p>
+<div class="container">
+  <header>
+    <h1>Free AI Imagine</h1>
+    <div class="subtitle">No login • No limits (while services allow) • Multiple public models</div>
+  </header>
 
-    <textarea id="prompt" placeholder="Describe your image... (e.g., cyberpunk city at night with neon lights, very detailed)"></textarea>
+  <div class="card">
+    <div class="prompt-area">
+      <label for="prompt">Your image idea:</label>
+      <textarea 
+        id="prompt" 
+        placeholder="A futuristic cyberpunk city at night with flying cars and neon reflections, ultra detailed, cinematic lighting..."
+        autofocus
+      ></textarea>
+    </div>
 
-    <div>
-      <button id="generateBtn">Generate Image</button>
+    <div class="controls">
+      <button class="btn" id="generateBtn">Generate Image</button>
       <span id="status"></span>
     </div>
 
-    <div id="result"></div>
+    <div class="small-note">
+       • Results may vary in quality & speed
+    </div>
   </div>
 
-  <div class="footer">
-    This is a prototype • Images generated via <a href="https://pollinations.ai" target="_blank">Pollinations.ai</a> public endpoint<br>
-    Quality & availability may vary • Enjoy responsibly!
+  <div class="result-container" id="resultContainer">
+    <!-- Generated image will appear here -->
   </div>
+</div>
 
-  <script>
-    const generateBtn = document.getElementById('generateBtn');
-    const promptInput = document.getElementById('prompt');
-    const status = document.getElementById('status');
-    const resultDiv = document.getElementById('result');
+<div class="footer">
+  Prototype • Made for development • Quality depends on free public services availability
+</div>
 
-    generateBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      if (!prompt) {
-        alert('Please enter a description first!');
-        return;
-      }
+<script>
+  const generateBtn = document.getElementById('generateBtn');
+  const promptInput = document.getElementById('prompt');
+  const status = document.getElementById('status');
+  const resultContainer = document.getElementById('resultContainer');
 
-      generateBtn.disabled = true;
-      status.textContent = 'Generating... (usually 5–30 seconds)';
-      resultDiv.innerHTML = '';
+  generateBtn.addEventListener('click', generateImage);
 
-      try {
-        // Option 1: Call your own backend proxy (recommended for rate limiting & future features)
-        // const response = await axios.post('https://your-backend-domain.com/api/generate', { prompt });
-        // const imageUrl = response.data.imageUrl;  // adjust based on what your backend returns
+  async function generateImage() {
+    const prompt = promptInput.value.trim();
+    
+    if (!prompt) {
+      alert("Please write something first :)");
+      return;
+    }
 
-        // Option 2: Direct call to Pollinations public endpoint (simplest, no backend needed!)
-        const encodedPrompt = encodeURIComponent(prompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&seed=${Date.now()}`;
+    generateBtn.disabled = true;
+    status.textContent = "Generating... (5–45 seconds)";
+    resultContainer.innerHTML = '<div class="loading-placeholder"></div>';
 
-        // Display the image (it generates on-the-fly when the URL is loaded)
-        resultDiv.innerHTML = `
-          <img src="${imageUrl}" alt="AI Generated Image" 
-               onload="this.style.opacity=1" 
-               style="opacity:0; transition:opacity 0.5s;">
-          <p style="margin-top:10px; color:#666;">
-            Generated with Flux model • <a href="${imageUrl}" target="_blank">Direct link</a>
-          </p>
-        `;
+    try {
+      // ──────────────────────────────
+      //  Option 1 - Pollinations (most reliable free direct URL at the moment)
+      // ──────────────────────────────
+      const encodedPrompt = encodeURIComponent(prompt);
+      let imageUrl = `https://pollinations.ai/p/${encodedPrompt}?width=1024&height=1024&nologo=true&enhance=true&seed=${Date.now()}`;
 
-      } catch (error) {
-        console.error(error);
-        resultDiv.innerHTML = `<p style="color:red;">Error: ${error.message || 'Something went wrong'}</p>`;
-      } finally {
-        generateBtn.disabled = false;
-        status.textContent = '';
-      }
-    });
-  </script>
+      // ──────────────────────────────
+      //  Option 2 - Alternative (uncomment if pollinations doesn't work)
+      // imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux&width=1024&height=1024`;
+      // ──────────────────────────────
 
+      // Simple pre-check
+      const img = new Image();
+      img.onload = () => {
+        showResult(img.src);
+      };
+      img.onerror = () => {
+        showError("Service didn't respond with an image. Try different prompt or wait a bit.");
+      };
+      img.src = imageUrl;
+
+    } catch (err) {
+      showError("Something went wrong: " + (err.message || "Unknown error"));
+    }
+  }
+
+  function showResult(url) {
+    status.textContent = "";
+    generateBtn.disabled = false;
+
+    resultContainer.innerHTML = `
+      <img 
+        src="${url}" 
+        alt="AI Generated Image" 
+        class="result-image"
+        loading="lazy"
+      >
+      <div style="margin-top:1rem; color:#64748b; font-size:0.95rem;">
+        Generated • Right-click to save • 
+        <a href="${url}" target="_blank" style="color:var(--primary);">Open full size</a>
+      </div>
+    `;
+  }
+
+  function showError(message) {
+    status.textContent = "";
+    generateBtn.disabled = false;
+    resultContainer.innerHTML = `
+      <div style="padding:2rem; background:#fee2e2; border-radius:12px; color:#991b1b; text-align:center;">
+        ${message}<br><br>
+        <small>Free services can be unstable. Try again in a minute or change the prompt.</small>
+      </div>
+    `;
+  }
+</script>
 </body>
 </html>
