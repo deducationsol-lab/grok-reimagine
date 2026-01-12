@@ -1,4 +1,3 @@
-// backend/server.js
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
@@ -9,74 +8,102 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Simple in-memory rate limit (very basic – 10 req/min per IP)
-// In production → use express-rate-limit package or redis
+// Very basic in-memory rate limit (protect public abuse)
 const requestLog = new Map(); // ip → {count, timestamp}
 
 app.post('/api/generate', async (req, res) => {
-  const { prompt, width = 1024, height = 1024, model = 'flux', seed, nologo = true } = req.body;
+  const { prompt, type = 'image' } = req.body;
 
-  if (!prompt || typeof prompt !== 'string' || prompt.length < 5) {
-    return res.status(400).json({ error: 'Valid prompt is required (min 5 chars)' });
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 5) {
+    return res.status(400).json({ error: 'Valid prompt required (min 5 chars)' });
   }
 
-  // Very basic rate limiting (protect public abuse)
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  // Rate limit: ~8 req/min per IP (simple protection)
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
   const now = Date.now();
-  const userData = requestLog.get(ip) || { count: 0, resetTime: now + 60000 };
+  const userData = requestLog.get(ip) || { count: 0, reset: now + 60000 };
 
-  if (now > userData.resetTime) {
+  if (now > userData.reset) {
     userData.count = 0;
-    userData.resetTime = now + 60000; // 1 minute window
+    userData.reset = now + 60000;
   }
 
-  if (userData.count >= 10) { // 10 requests per minute max
-    return res.status(429).json({ error: 'Rate limit exceeded. Try again in 1 minute.' });
+  if (userData.count >= 8) {
+    return res.status(429).json({ error: 'Rate limit: 8 requests per minute' });
   }
-
   userData.count++;
   requestLog.set(ip, userData);
 
   try {
-    // Build Pollinations.ai URL
-    let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+    let imageUrl = null;
 
-    const params = new URLSearchParams();
-    if (width) params.append('width', width);
-    if (height) params.append('height', height);
-    if (model) params.append('model', model);           // flux, turbo, anything, etc.
-    if (seed) params.append('seed', seed);
-    if (nologo) params.append('nologo', 'true');
-
-    if (params.toString()) {
-      url += `?${params.toString()}`;
+    // Fallback 1: Try Craiyon reverse-engineered public endpoint (slow, but free/no key)
+    try {
+      const craiyonResponse = await axios.post(
+        'https://backend.craiyon.com/generate',
+        { prompt: prompt.trim() },
+        { timeout: 60000 }
+      );
+      // Craiyon usually returns array of base64 or urls in response.data.images
+      if (craiyonResponse.data?.images?.[0]) {
+        imageUrl = `data:image/png;base64,${craiyonResponse.data.images[0]}`;
+      }
+    } catch (e) {
+      console.log('Craiyon failed:', e.message);
     }
 
-    // Fetch the image
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer', // Get raw binary
-      timeout: 45000               // 45s timeout – generations can be slow
+    // Fallback 2: Pollinations legacy-style (if still works in your region)
+    if (!imageUrl) {
+      try {
+        const encoded = encodeURIComponent(prompt.trim());
+        imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&model=flux&seed=${Date.now()}`;
+        
+        // Quick head check if URL likely works
+        await axios.head(imageUrl, { timeout: 8000 });
+      } catch (e) {
+        console.log('Pollinations legacy failed:', e.message);
+      }
+    }
+
+    // Fallback 3: Any other public proxy (example placeholder - replace if you find working one)
+    // e.g. some Replit-hosted wrappers, but they change often
+
+    if (!imageUrl) {
+      return res.status(503).json({
+        error: 'All free public image services are currently unavailable or rate-limited',
+        suggestion: 'Try again later or consider client-side Puter.js integration'
+      });
+    }
+
+    // For video → no reliable free public endpoint exists right now
+    if (type === 'video') {
+      return res.status(501).json({
+        error: 'Free public text-to-video generation not available yet (2026)',
+        note: 'Most services require API keys / credits (Runway, Kling, Pika, etc.)'
+      });
+    }
+
+    // Return direct image URL (frontend can <img src={imageUrl}>)
+    res.json({
+      success: true,
+      url: imageUrl,
+      source: imageUrl.includes('pollinations') ? 'Pollinations' : 'Craiyon',
+      generatedAt: new Date().toISOString()
     });
 
-    // Send image back to client
-    res.set('Content-Type', 'image/png');
-    res.set('Cache-Control', 'public, max-age=3600'); // Cache 1 hour
-    res.send(response.data);
-
   } catch (error) {
-    console.error('Pollinations error:', error.message);
-    const status = error.response?.status || 500;
-    res.status(status).json({
+    console.error('Generation error:', error.message);
+    res.status(500).json({
       error: 'Image generation failed',
-      details: error.message.includes('timeout') ? 'Generation timeout' : 'Service unavailable'
+      details: error.message
     });
   }
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', using: 'pollinations.ai public endpoint' });
+  res.json({ status: 'ok', services: 'Multiple free public image APIs (Craiyon + Pollinations fallback)' });
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port} • Using Pollinations.ai public API`);
+  console.log(`Backend running on port ${port} • Free public multi-API proxy mode`);
 });
